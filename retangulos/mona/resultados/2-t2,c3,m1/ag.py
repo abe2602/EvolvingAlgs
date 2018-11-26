@@ -2,18 +2,17 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageChops
 import math 
 import functools as ft
+import operator
+import gc
 from matplotlib import pyplot as plt
 
 TAM_POP = 50
-ESTAG = 0
-MUT_RATE = 10
-MUT_2 = 0.2
-MUT_3 = 0.01
-#CHILDREN_PER_GEN = 8
-GENERATIONS = 20000
+MUT_RATE = 0.05
+CHILDREN_PER_GEN = 8
+GENERATIONS = 1000
 POLY_NUM = 100
-RESULT_NAME = "Resultados/linux/linux"
-IMG_NAME = "Imagens/linux.jpg"
+RESULT_NAME = "retangulos/mona/mona"
+IMG_NAME = "retangulos/mona/ffff.jpg"
 
 
 #Classe que representa um gene
@@ -55,7 +54,7 @@ class individuo(object):
 		if(pai and mae):
 			self.genes = crossover(pai, mae, POLY_NUM)
 			#array = crossover(pai, mae, POLY_NUM)
-			#self.mutate(array)
+			#self.mutateFromParents(array)
 		else:
 			self.genes = initGenes()
 		
@@ -64,35 +63,38 @@ class individuo(object):
 		
 	
 	#Faz a mutacao - de acordo com a taxa de mutacao - do gene.
-	#Ou seja, o vetor de genes eh modificado em apenas alguns genes
+	#Ou seja, o vetor de genes eh criado e so alguns dos genes sao escolhidos
 	
-	def mutate(self, genes):
+	def mutateFromParents(self, array):
+		zipArray = zip(*[iter(array)]*5)
+		#zipArray = zip(*[iter(array)]*6)
+		self.genes = []
 		
-		x = np.random.uniform(0, 1) 
-		
-		if x > MUT_2:
-			#so muta 1 gene aleatorio
-			self.mut(np.random.randint(0, POLY_NUM))
+		for arr in zipArray:
+			#g = geneVazio()
+			g = gene()
+			if np.random.uniform(0, 1) > MUT_RATE:
+				#triangulos
+				#g.p1 = arr[0]
+				#g.p2 = arr[1]
+				#g.p3 = arr[2]
+				#g.rgba['r'] = arr[3]
+				#g.rgba['g'] = arr[4]
+				#g.rgba['b'] = arr[5]
 
-		elif x > MUT_3:
-			#muta 2 genes aleatorios
-			self.mut(np.random.randint(0, POLY_NUM))
-			self.mut(np.random.randint(0, POLY_NUM))
-
-		else:
-			#muta 3 genes aleatorios
-			self.mut(np.random.randint(0, POLY_NUM))
-			self.mut(np.random.randint(0, POLY_NUM))
-			self.mut(np.random.randint(0, POLY_NUM))
-
-
-	def mut(self, i):
-		self.genes[i].p1 = (rand_limits(self.genes[i].p1[0], 200), rand_limits(self.genes[i].p1[1], 200))
-		self.genes[i].p2 = (rand_limits(self.genes[i].p2[0], 200), rand_limits(self.genes[i].p2[1], 200))
-		self.genes[i].rgba['r'] = rand_limits(self.genes[i].rgba['r'], 255)
-		self.genes[i].rgba['g'] = rand_limits(self.genes[i].rgba['g'], 255)
-		self.genes[i].rgba['b'] = rand_limits(self.genes[i].rgba['b'], 255)
-
+				#retangulos
+				g.p1 = arr[0]
+				g.p2 = arr[1]
+				g.rgba['r'] = arr[2]
+				g.rgba['g'] = arr[3]
+				g.rgba['b'] = arr[4]
+			#else:
+			#	g.p1 = (arr[0][0] + 10, arr[0][1] + 10)
+			#	g.p2 = (arr[1][0] + 10, arr[1][1] + 10)
+			#	g.rgba['r'] = arr[2] + 10
+			#	g.rgba['g'] = arr[3] + 10
+				#g.rgba['b'] = arr[4] + 10
+			self.genes.append(g)
 
 	def getArray(self):
 		array = []
@@ -104,19 +106,6 @@ class individuo(object):
 			array.append(g.rgba['g'])
 			array.append(g.rgba['b'])
 		return array	
-
-
-#Soma um numero entre -10 e 10
-#Verifica se os valores de um gene estao dentro dos limites da imagem e das cores
-def rand_limits(num, limit):
-	num = num + np.random.randint(-MUT_RATE, MUT_RATE + 1)
-
-	if num < 0:
-		num = 0
-	elif num > limit:
-		num = limit
-
-	return num
 
 
 #Cria a nossa populacao de poligonos, os quais serao comparados com a imagem real
@@ -137,6 +126,8 @@ def initPop(im):
 
 	find_best(pop)
 
+	#pop.sort(key=lambda x: x.fitness)
+	#pop = pop[:TAM_POP]
 	pop = select_pop(pop)
 
 	return pop
@@ -144,8 +135,6 @@ def initPop(im):
 
 #encontra qual o melhor individuo e coloca o melhor na posicao 0
 def find_best(pop):
-	global ESTAG, MUT_RATE
-
 	#encontra qual o melhor individuo
 	best = 0
 	for i in range(1, len(pop)):
@@ -157,14 +146,6 @@ def find_best(pop):
 		aux = pop[0]
 		pop[0] = pop[best]
 		pop[best] = aux
-		ESTAG = 0
-	else:
-		ESTAG += 1
-		if ESTAG % 21 == 0:
-			MUT_RATE += 5
-		elif ESTAG == 100:
-			MUT_RATE = 5
-			ESTAG = 0
 	
 
 #seleciona aleatoriamente individuos da populacao
@@ -222,37 +203,44 @@ def getImage(genes):
 	return im
 
 
-#Crossover Uniforme, escolhe ate 10 genes de cada dos pais - aleatoriamente
+#Crossover Uniforme, escolhe um de cada dos pais - aleatoriamente
 
 def crossover(pai, mae, POLY_NUM):
-	array1 = pai.getArray()
-	array2 = mae.getArray()
+	#array1 = pai.getArray()
+	#array2 = mae.getArray()
 	newArray = []
-	flag = np.random.randint(0,1)
-	lastPosi = 0
-	pos = np.random.randint(0, 10)
+	#flag = True
+	#lastPosi = 0
+	#pos = np.random.randint(0, 10)
 
-	while lastPosi < POLY_NUM * 5:
-		if flag == 0:
-			newArray += array1[lastPosi:pos]
+	#while lastPosi < POLY_NUM * 5:
+	#	if flag:
+	#		newArray += array1[lastPosi:pos]
+	#	else:
+	#		newArray += array2[lastPosi:pos]
+	#	flag = False
+	#	lastPosi = pos
+	#	pos = np.random.randint(lastPosi, lastPosi+10)
+
+	for i in range(POLY_NUM):
+		gene = geneVazio()
+		gene.p1 = ((pai.genes[i].p1[0] + mae.genes[i].p1[0])/2, (pai.genes[i].p1[1] + mae.genes[i].p1[1])/2)
+		gene.p2 = ((pai.genes[i].p2[0] + mae.genes[i].p2[0])/2, (pai.genes[i].p2[1] + mae.genes[i].p2[1])/2)
+
+		x = np.random.randint(0,1)
+
+		if x == 0:
+			gene.rgba['r'] = pai.genes[i].rgba['r']
+			gene.rgba['g'] = pai.genes[i].rgba['g']
+			gene.rgba['b'] = pai.genes[i].rgba['b']
 		else:
-			newArray += array2[lastPosi:pos]
-		flag = np.random.randint(0,2)
-		lastPosi = pos
-		pos = np.random.randint(lastPosi, lastPosi+10)
+			gene.rgba['r'] = mae.genes[i].rgba['r']
+			gene.rgba['g'] = mae.genes[i].rgba['g']
+			gene.rgba['b'] = mae.genes[i].rgba['b']
 
-	zipArray = zip(*[iter(newArray)]*5)
-	genes = []
-	for arr in zipArray:
-		g = geneVazio()
-		g.p1 = arr[0]
-		g.p2 = arr[1]
-		g.rgba['r'] = arr[2]
-		g.rgba['g'] = arr[3]
-		g.rgba['b'] = arr[4]
-		genes.append(g)
+		newArray.append(gene)
 
-	return genes
+	return newArray
 
 
 #Encontra a diferenca entre duas imagens (no caso, a imagem atual e a imagem alvo)
@@ -260,43 +248,9 @@ def crossover(pai, mae, POLY_NUM):
 def getFitness(im1, im2):
 	errors = np.asarray(ImageChops.difference(im1, im2)) / 255.0 #normaliza
 	diff = math.sqrt(np.mean(np.square(errors)))
+	#diff = np.sum(np.square(errors))
 	return diff
 
-
-#Individuo novo a partir de um pai e uma mae
-def torneio2(im, pop):
-	children = []
-
-	for j in range(1, TAM_POP): #Ciclo principal
-		pai = None
-		mae = None
-		pais = np.random.choice(pop, 2, False)
-		maes = np.random.choice(pop, 2, False)
-
-		if pais[0].fitness < pais[1].fitness:
-			pai = pais[0]
-		else:
-			pai = pais[1]
-		if maes[0].fitness < maes[1].fitness:
-			mae = maes[0]
-		else:
-			mae = maes[1]
-
-		child = individuo(im, pai, mae)
-		children.append(child)
-
-	return children
-
-
-#melhor transa com todos
-def best_all(im, pop):
-	children = []
-
-	for j in range(1, TAM_POP):		 
-		child = individuo(im, pop[0], pop[j])
-		children.append(child)
-
-	return children
 
 #Funcao de evolucao. 
 #Eh nela onde escolhemos os melhores candidatos e "descartamos" os demais.
@@ -305,27 +259,47 @@ def evolve(pop, im):
 	lista = [[], []]
 	for k in range(0, GENERATIONS):
 		children = []
+		#parents = []
 
-		children = torneio2(im, pop)
-		#children = best_all(im, pop)
+		for j in range(1, TAM_POP): #Ciclo principal
+			#torneio de 2
+			pai = None
+			mae = None
+			pai1 = np.random.choice(pop)
+			pai2 = np.random.choice(pop)
+			mae1 = np.random.choice(pop)
+			mae2 = np.random.choice(pop)
+			if pai1.fitness < pai2.fitness:
+				pai = pai1
+			else:
+				pai = pai2
+			if mae1.fitness < mae2.fitness:
+				mae = mae1
+			else:
+				mae = mae2
+			child = individuo(im, pai, mae) #Individuo novo a partir de um pai e uma mae
+			#child = individuo(im, pop[0], pop[j]) #melhor transa com todos
+			children.append(child)
 
 		#Adiciona os novos filhos
 		pop += children
 
 		#todos os individuos sofrem mutacao
 		for i in range(1,len(pop)):
-			pop[i].mutate(pop[i].genes)
+		#for i in range(1,TAM_POP):
+			pop[i].mutateFromParents(pop[i].getArray())
 
 		find_best(pop)
+		#pop.sort(key=lambda x: x.fitness) #Ve quem sao os melhores
+		#pop = pop[:TAM_POP] #Descarta os piores
 		pop = select_pop(pop)
 		
 
 		if k % 10000 == 0 or k in [100, 500, 1000, 5000]: #Salva uma imagem a cada 10000 iteracoes
 			print("Geracao: ", k, "pop: ", len(pop), "melhor: ", pop[0].fitness)
-			name = RESULT_NAME + str(k) + "f" + str(round(pop[0].fitness, 3)) + ".png"
+			name = RESULT_NAME + str(k) + ".png"
 			pop[0].currentImage.save(name, "PNG")
 		
-		#estrutura auxiliar para fazer o grafico
 		fit = []
 		for i in pop:
 			fit.append(i.fitness)
@@ -342,16 +316,18 @@ if __name__ == '__main__':
 	pop = initPop(h1)
 
 	x, lista = evolve(pop, h1)
-	x[0].currentImage.save(RESULT_NAME + "f" + str(round(x[0].fitness, 3)) + ".png", "PNG")
+	x[0].currentImage.save(RESULT_NAME + ".png", "PNG")
 	x[0].currentImage.show()
 	
-
-	#faz o grafico de fitnessxgeracao, melhor e media da populacao
-	#GRÁFICO AQUI
-	"""
 	plt.suptitle(RESULT_NAME)
 	plt.xlabel("Geracao")
 	plt.ylabel("Fitnes")
 	leg1, leg2 = plt.plot(lista[0], "r--", lista[1], "g--")
 	plt.figlegend((leg1, leg2), ("Melhor", "Media"), "upper right")
-	plt.show()"""
+	plt.show()
+
+
+
+#arrumar negocio do sort
+#ver mutacao
+#fazer melhor transa com todos

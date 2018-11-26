@@ -2,18 +2,19 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageChops
 import math 
 import functools as ft
+import operator
+import gc
 from matplotlib import pyplot as plt
 
 TAM_POP = 50
-ESTAG = 0
-MUT_RATE = 10
+#MUT_RATE = 0.05
 MUT_2 = 0.2
 MUT_3 = 0.01
 #CHILDREN_PER_GEN = 8
-GENERATIONS = 20000
+GENERATIONS = 500
 POLY_NUM = 100
-RESULT_NAME = "Resultados/linux/linux"
-IMG_NAME = "Imagens/linux.jpg"
+RESULT_NAME = "retangulos/mona/mona"
+IMG_NAME = "retangulos/mona/ffff.jpg"
 
 
 #Classe que representa um gene
@@ -109,7 +110,7 @@ class individuo(object):
 #Soma um numero entre -10 e 10
 #Verifica se os valores de um gene estao dentro dos limites da imagem e das cores
 def rand_limits(num, limit):
-	num = num + np.random.randint(-MUT_RATE, MUT_RATE + 1)
+	num = num + np.random.randint(-10, 11)
 
 	if num < 0:
 		num = 0
@@ -144,8 +145,6 @@ def initPop(im):
 
 #encontra qual o melhor individuo e coloca o melhor na posicao 0
 def find_best(pop):
-	global ESTAG, MUT_RATE
-
 	#encontra qual o melhor individuo
 	best = 0
 	for i in range(1, len(pop)):
@@ -157,14 +156,6 @@ def find_best(pop):
 		aux = pop[0]
 		pop[0] = pop[best]
 		pop[best] = aux
-		ESTAG = 0
-	else:
-		ESTAG += 1
-		if ESTAG % 21 == 0:
-			MUT_RATE += 5
-		elif ESTAG == 100:
-			MUT_RATE = 5
-			ESTAG = 0
 	
 
 #seleciona aleatoriamente individuos da populacao
@@ -268,7 +259,7 @@ def torneio2(im, pop):
 	children = []
 
 	for j in range(1, TAM_POP): #Ciclo principal
-		pai = None
+	 	pai = None
 		mae = None
 		pais = np.random.choice(pop, 2, False)
 		maes = np.random.choice(pop, 2, False)
@@ -347,11 +338,9 @@ if __name__ == '__main__':
 	
 
 	#faz o grafico de fitnessxgeracao, melhor e media da populacao
-	#GRÁFICO AQUI
-	"""
 	plt.suptitle(RESULT_NAME)
 	plt.xlabel("Geracao")
 	plt.ylabel("Fitnes")
 	leg1, leg2 = plt.plot(lista[0], "r--", lista[1], "g--")
 	plt.figlegend((leg1, leg2), ("Melhor", "Media"), "upper right")
-	plt.show()"""
+	plt.show()
