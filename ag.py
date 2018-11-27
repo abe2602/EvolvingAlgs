@@ -1,7 +1,7 @@
 """
 Criado por: 
 Bruno Bacelar Abe, bruno.abe@usp.br
-Paula Cepollaro Diana, email is coming
+Paula Cepollaro Diana, paula.cepollaro@gmail.com
 """
 import numpy as np 
 from PIL import Image, ImageDraw, ImageChops
